@@ -1,6 +1,15 @@
 import * as fs from "fs";
 import * as path from "path";
 import csvParser from "csv-parser";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import Phrase from "./src/Model";
+import { ConnectionOptions } from "tls";
+
+
+// Charger les variables d'environnement
+dotenv.config();
+
 
 // Chemin du fichier de sortie
 const outputFilePath = path.resolve(__dirname, "output.txt");
@@ -107,6 +116,132 @@ const cleanOutputFile = (): void => {
       console.log("Le fichier output.txt n'existe pas.");
     }
 };
+
+
+
+// Connexion à MongoDB
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.DB_URL!);
+    console.log("Connecté à MongoDB !");
+  } catch (error) {
+    console.error("Erreur de connexion à MongoDB :", error);
+    process.exit(1);
+  }
+};
+
+
+// Fonction pour ajouter les phrases
+
+const addPhrasesToDB = async ()  =>{
+  try {
+    const filePath = outputFilePath;
+    
+    if (!fs.existsSync(filePath)) {
+      throw new Error("Le fichier output.txt n'existe pas");
+    }
+
+    const content = fs.readFileSync(filePath, "utf-8");
+    const phrases = content.split("\n").filter((line) => line.trim());
+    let i = 1;
+    for(const text of phrases){
+      try{
+        await Phrase.create({Arabizi: text});
+        console.log(`Phrase ajouté ${i}`);
+        i += 1;
+
+      } catch (err : any){
+        if (err.code === 11000) {
+          console.log(`Phrase déjà existante : ${text} ::: ${i}`);
+        } else {
+          console.error(`Erreur pour la phrase "${text}":`, err);
+        }
+        //console.error(`Erreur pour la phrase "${text}":`, err.message);
+      }
+    }
+
+    console.log("Toutes les phrases ont été traitées." + i.toString());
+  } catch (err) {
+    console.error("Erreur :", err);
+
+  }finally {
+    mongoose.disconnect();
+  }
+}
+
+// Fonction pour exporter les phrases
+const exportPhrasesToFile = async () => {
+  try {
+    const phrases = await Phrase.find({}, { text: 1, _id: 0 }); // Récupérer uniquement le champ `text`
+    const filePath = path.resolve(__dirname, "exported_phrases.txt");
+
+    // Écrire les phrases dans le fichier
+    const content = phrases.map((phrase) => phrase.Arabizi).join("\n");
+    fs.writeFileSync(filePath, content, "utf-8");
+
+    console.log(`Phrases exportées avec succès dans : ${filePath}`);
+  } catch (error) {
+    console.error("Erreur lors de l'exportation :", error);
+  } finally {
+    mongoose.disconnect();
+  }
+};
+
+
+// Fonction pour importer les données depuis le fichier JSON
+const importPhrasesFromJson = async () => {
+  try {
+    const filePath = path.resolve(__dirname, "updated_standardized_dataset.json"); // Met à jour le chemin selon où se trouve ton fichier JSON
+
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(filePath)) {
+      throw new Error("Le fichier JSON n'existe pas !");
+    }
+
+    // Lire et analyser le fichier JSON
+    const jsonData = fs.readFileSync(filePath, "utf-8");
+    const phrases = JSON.parse(jsonData);
+
+    // Insérer chaque phrase dans la base de données
+    for (const phrase of phrases) {
+      const { Arabizi, French } = phrase;
+
+      try {
+        // Créer un nouveau document dans MongoDB
+        await Phrase.create({
+          Arabizi,
+          French,
+        });
+
+        console.log(`Phrase ajoutée : ${Arabizi}`);
+      } catch (err: any) {
+        // Gérer les erreurs, par exemple si la phrase existe déjà
+        if (err.code === 11000) {
+          console.log(`Phrase déjà existante : ${Arabizi}`);
+        } else {
+          console.error(`Erreur pour la phrase "${Arabizi}":`, err);
+        }
+      }
+    }
+
+    console.log("Toutes les phrases ont été importées.");
+  } catch (error) {
+    console.error("Erreur lors de l'importation :", error);
+  } finally {
+    mongoose.disconnect();
+  }
+};
+
+// Exécution du script
+(async () => {
+  await connectDB();
+  await importPhrasesFromJson();
+  //await exportPhrasesToFile();
+  //await addPhrasesToDB();
+})();
+
+
+
 
 //cleanOutputFile();
 

@@ -16,6 +16,8 @@
     "typescript": "^5.4.2"
   },
   "dependencies": {
-    "csv-parser": "^3.0.0"
+    "csv-parser": "^3.0.0",
+    "dotenv": "^16.4.6",
+    "mongoose": "^8.8.3"
   }
 }

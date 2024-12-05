@@ -2,4 +2,5 @@ node_modules/
 .env
 input/
 output.txt
-
+updated_standardized_dataset.json
+exported_phrases.txt
