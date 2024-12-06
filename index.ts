@@ -4,7 +4,7 @@ import csvParser from "csv-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Phrase from "./src/Model";
-import { ConnectionOptions } from "tls";
+import PhraseTest from "./src/ModelTest";
 
 
 // Charger les variables d'environnement
@@ -143,10 +143,10 @@ const addPhrasesToDB = async ()  =>{
 
     const content = fs.readFileSync(filePath, "utf-8");
     const phrases = content.split("\n").filter((line) => line.trim());
-    let i = 1;
+    let i = 0;
     for(const text of phrases){
       try{
-        await Phrase.create({Arabizi: text});
+        await PhraseTest.create({Arabizi: text});
         console.log(`Phrase ajouté ${i}`);
         i += 1;
 
@@ -235,9 +235,9 @@ const importPhrasesFromJson = async () => {
 // Exécution du script
 (async () => {
   await connectDB();
-  await importPhrasesFromJson();
+  //await importPhrasesFromJson();
   //await exportPhrasesToFile();
-  //await addPhrasesToDB();
+  await addPhrasesToDB();
 })();
 
 
